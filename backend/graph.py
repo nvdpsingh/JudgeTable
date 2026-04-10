@@ -14,16 +14,16 @@ The moderator decides SATISFIED or CONTINUE — if CONTINUE, agents re-run
 with cross-pollination feedback from the moderator.
 """
 
-import asyncio
-import json
 import operator
 import os
 import re
 from typing import TypedDict, Annotated
 
 from langchain_core.messages import SystemMessage, HumanMessage, ToolMessage
+from langchain_core.runnables import RunnableConfig
 from langchain_groq import ChatGroq
-from langgraph.graph import StateGraph, START, END, Send
+from langgraph.graph import StateGraph, START, END
+from langgraph.types import Send
 from pydantic import BaseModel, Field
 
 from agents import AGENTS, MODERATOR, SYNTHESIZER
@@ -65,7 +65,7 @@ class AgentWorkerState(TypedDict):
     round_number: int
     previous_response: str
     cross_pollination: str
-    agent_config: dict
+    agent_config: RunnableConfig
 
 
 # ────────────────────────────────────────────
@@ -133,7 +133,7 @@ async def _emit(config, event: str, data: dict):
 # Node: Amplifier (tool-calling agentic loop)
 # ────────────────────────────────────────────
 
-async def amplifier_node(state: JudgeTableState, config: dict):
+async def amplifier_node(state: JudgeTableState, config: RunnableConfig):
     db_available = config.get("configurable", {}).get("db_available", False)
     user_id = state["user_id"]
     decision = state["decision"]
@@ -208,7 +208,7 @@ async def amplifier_node(state: JudgeTableState, config: dict):
 # Node: Agent worker (one per agent, fan-out via Send)
 # ────────────────────────────────────────────
 
-async def agent_worker_node(state: AgentWorkerState, config: dict):
+async def agent_worker_node(state: AgentWorkerState, config: RunnableConfig):
     agent = state["agent_config"]
     key = agent["key"]
     round_num = state["round_number"]
@@ -267,7 +267,7 @@ async def agent_worker_node(state: AgentWorkerState, config: dict):
 # Node: Moderator
 # ────────────────────────────────────────────
 
-async def moderator_node(state: JudgeTableState, config: dict):
+async def moderator_node(state: JudgeTableState, config: RunnableConfig):
     round_num = state["round_number"]
 
     await _emit(config, "moderator_start", {
@@ -336,7 +336,7 @@ async def moderator_node(state: JudgeTableState, config: dict):
 # Node: Synthesizer
 # ────────────────────────────────────────────
 
-async def synthesizer_node(state: JudgeTableState, config: dict):
+async def synthesizer_node(state: JudgeTableState, config: RunnableConfig):
     await _emit(config, "synthesizer_start", {
         "name": SYNTHESIZER["name"],
         "role": SYNTHESIZER["role"],

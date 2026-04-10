@@ -269,6 +269,72 @@ h1, h2, h3 {
   }
 }
 
+/* ── Amplifier Card ── */
+
+.amplifier-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 0.85rem 1.25rem;
+  margin-bottom: 1.25rem;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.amplifier-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.amplifier-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #06b6d4;
+  box-shadow: 0 0 6px rgba(6, 182, 212, 0.5);
+  animation: pulse 1.5s ease-in-out infinite;
+}
+
+.amplifier-card[data-done] .amplifier-dot {
+  animation: none;
+}
+
+.amplifier-name {
+  font-weight: 600;
+  font-size: 0.8rem;
+  color: #06b6d4;
+}
+
+.amplifier-status {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+}
+
+.amplifier-categories {
+  display: flex;
+  gap: 0.35rem;
+  flex-wrap: wrap;
+}
+
+.amplifier-tag {
+  background: rgba(6, 182, 212, 0.1);
+  border: 1px solid rgba(6, 182, 212, 0.25);
+  color: #06b6d4;
+  font-size: 0.68rem;
+  padding: 0.15rem 0.5rem;
+  border-radius: 12px;
+  text-transform: capitalize;
+}
+
+.amplifier-summary {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  width: 100%;
+}
+
 /* ── Agent Card ── */
 
 .agent-card {
