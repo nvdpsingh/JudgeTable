@@ -1,26 +1,41 @@
 import { useState } from "react";
 import DecisionInput from "./components/DecisionInput";
 import AgentCard from "./components/AgentCard";
+import ModeratorCard from "./components/ModeratorCard";
+import DissentBanner from "./components/DissentBanner";
 import Verdict from "./components/Verdict";
+import KnowledgeBase from "./components/KnowledgeBase";
 
-const AGENT_ORDER = ["mirror", "realist", "future_self", "challenger"];
+const AGENT_KEYS = [
+  "strategist", "devils_advocate", "realist", "inner_critic",
+  "systems_thinker", "accountability", "empathy", "domain_expert",
+];
 
-const INITIAL_AGENTS = {
-  mirror: { name: "The Mirror", role: "reflects your blind spots", color: "purple", content: "", streaming: false, waiting: true },
-  realist: { name: "The Realist", role: "counts the real cost", color: "amber", content: "", streaming: false, waiting: true },
-  future_self: { name: "The Future Self", role: "speaks from 2 years ahead", color: "teal", content: "", streaming: false, waiting: true },
-  challenger: { name: "The Challenger", role: "argues the opposite", color: "coral", content: "", streaming: false, waiting: true },
+const AGENT_DEFAULTS = {
+  strategist:      { name: "The Strategist",       role: "long-term alignment & trade-offs",           color: "blue",   content: "", streaming: false, waiting: true },
+  devils_advocate: { name: "The Devil's Advocate",  role: "challenges every assumption",                color: "red",    content: "", streaming: false, waiting: true },
+  realist:         { name: "The Realist",           role: "feasibility, energy, resources & timing",    color: "amber",  content: "", streaming: false, waiting: true },
+  inner_critic:    { name: "The Inner Critic",      role: "self-sabotage, fear, ego & blind spots",     color: "purple", content: "", streaming: false, waiting: true },
+  systems_thinker: { name: "The Systems Thinker",   role: "2nd-order effects, ripples & loops",         color: "teal",   content: "", streaming: false, waiting: true },
+  accountability:  { name: "The Accountability Agent", role: "past commitments & consistency check",    color: "green",  content: "", streaming: false, waiting: true },
+  empathy:         { name: "The Empathy Agent",     role: "emotional state, wellbeing & burnout",       color: "pink",   content: "", streaming: false, waiting: true },
+  domain_expert:   { name: "The Domain Expert",     role: "field-specific insight, benchmarks & norms", color: "gray",   content: "", streaming: false, waiting: true },
 };
 
 export default function App() {
+  const [tab, setTab] = useState("council");
   const [agents, setAgents] = useState(null);
-  const [judge, setJudge] = useState({ content: "", streaming: false });
+  const [moderator, setModerator] = useState({ content: "", streaming: false, visible: false });
+  const [dissent, setDissent] = useState([]);
+  const [synthesizer, setSynthesizer] = useState({ content: "", streaming: false, visible: false });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
   const handleSubmit = async (decision, context) => {
-    setAgents(structuredClone(INITIAL_AGENTS));
-    setJudge({ content: "", streaming: false });
+    setAgents(structuredClone(AGENT_DEFAULTS));
+    setModerator({ content: "", streaming: false, visible: false });
+    setDissent([]);
+    setSynthesizer({ content: "", streaming: false, visible: false });
     setLoading(true);
     setError(null);
 
@@ -73,47 +88,50 @@ export default function App() {
             case "agent_start":
               setAgents((prev) => ({
                 ...prev,
-                [parsed.key]: {
-                  ...prev[parsed.key],
-                  waiting: false,
-                  streaming: true,
-                },
+                [parsed.key]: { ...prev[parsed.key], waiting: false, streaming: true },
               }));
               break;
 
             case "agent_chunk":
               setAgents((prev) => ({
                 ...prev,
-                [parsed.key]: {
-                  ...prev[parsed.key],
-                  content: prev[parsed.key].content + parsed.chunk,
-                },
+                [parsed.key]: { ...prev[parsed.key], content: prev[parsed.key].content + parsed.chunk },
               }));
               break;
 
             case "agent_done":
               setAgents((prev) => ({
                 ...prev,
-                [parsed.key]: {
-                  ...prev[parsed.key],
-                  streaming: false,
-                },
+                [parsed.key]: { ...prev[parsed.key], streaming: false },
               }));
               break;
 
-            case "judge_start":
-              setJudge({ content: "", streaming: true });
+            case "moderator_start":
+              setModerator({ content: "", streaming: true, visible: true });
               break;
 
-            case "judge_chunk":
-              setJudge((prev) => ({
-                ...prev,
-                content: prev.content + parsed.chunk,
-              }));
+            case "moderator_chunk":
+              setModerator((prev) => ({ ...prev, content: prev.content + parsed.chunk }));
               break;
 
-            case "judge_done":
-              setJudge((prev) => ({ ...prev, streaming: false }));
+            case "moderator_done":
+              setModerator((prev) => ({ ...prev, streaming: false }));
+              break;
+
+            case "dissent":
+              setDissent(parsed);
+              break;
+
+            case "synthesizer_start":
+              setSynthesizer({ content: "", streaming: true, visible: true });
+              break;
+
+            case "synthesizer_chunk":
+              setSynthesizer((prev) => ({ ...prev, content: prev.content + parsed.chunk }));
+              break;
+
+            case "synthesizer_done":
+              setSynthesizer((prev) => ({ ...prev, streaming: false }));
               break;
 
             case "error":
@@ -133,7 +151,9 @@ export default function App() {
 
   const handleReset = () => {
     setAgents(null);
-    setJudge({ content: "", streaming: false });
+    setModerator({ content: "", streaming: false, visible: false });
+    setDissent([]);
+    setSynthesizer({ content: "", streaming: false, visible: false });
     setError(null);
   };
 
@@ -141,36 +161,64 @@ export default function App() {
     <div className="app">
       <header className="header">
         <h1>JudgeTable</h1>
-        <p>A council of perspectives to challenge your thinking</p>
+        <p>A council of 8 perspectives to challenge your thinking</p>
       </header>
 
-      <DecisionInput onSubmit={handleSubmit} loading={loading} />
+      <div className="tabs">
+        <button className={`tab${tab === "council" ? " active" : ""}`} onClick={() => setTab("council")}>
+          Council
+        </button>
+        <button className={`tab${tab === "knowledge" ? " active" : ""}`} onClick={() => setTab("knowledge")}>
+          Knowledge Base
+        </button>
+      </div>
 
-      {error && (
-        <div style={{ color: "var(--coral)", textAlign: "center", margin: "1rem 0", fontSize: "0.9rem" }}>
-          {error}
-        </div>
-      )}
-
-      {agents && (
+      {tab === "council" && (
         <>
-          <div className="agents-grid">
-            {AGENT_ORDER.map((key) => (
-              <AgentCard key={key} {...agents[key]} />
-            ))}
-          </div>
+          <DecisionInput onSubmit={handleSubmit} loading={loading} />
 
-          <Verdict content={judge.content} streaming={judge.streaming} />
-
-          {!loading && (judge.content || Object.values(agents).some((a) => a.content)) && (
-            <div style={{ textAlign: "center", marginTop: "2rem" }}>
-              <button className="reset-btn" onClick={handleReset}>
-                new decision &rarr;
-              </button>
+          {error && (
+            <div style={{ color: "var(--red)", textAlign: "center", margin: "1rem 0", fontSize: "0.9rem" }}>
+              {error}
             </div>
+          )}
+
+          {agents && (
+            <>
+              <p className="section-label">The Council</p>
+              <div className="agents-grid">
+                {AGENT_KEYS.map((key) => (
+                  <AgentCard key={key} {...agents[key]} />
+                ))}
+              </div>
+
+              <ModeratorCard
+                content={moderator.content}
+                streaming={moderator.streaming}
+                visible={moderator.visible}
+              />
+
+              <DissentBanner flags={dissent} />
+
+              <Verdict
+                content={synthesizer.content}
+                streaming={synthesizer.streaming}
+                visible={synthesizer.visible}
+              />
+
+              {!loading && (synthesizer.content || Object.values(agents).some((a) => a.content)) && (
+                <div style={{ textAlign: "center", marginTop: "2rem" }}>
+                  <button className="reset-btn" onClick={handleReset}>
+                    new decision &rarr;
+                  </button>
+                </div>
+              )}
+            </>
           )}
         </>
       )}
+
+      {tab === "knowledge" && <KnowledgeBase />}
     </div>
   );
 }

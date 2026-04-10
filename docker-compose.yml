@@ -1,10 +1,32 @@
 services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: judgetable
+      POSTGRES_PASSWORD: judgetable
+      POSTGRES_DB: judgetable
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
   backend:
     build: ./backend
     ports:
       - "8000:8000"
     env_file:
       - .env
+    environment:
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_USER: judgetable
+      DB_PASSWORD: judgetable
+      DB_NAME: judgetable
+    depends_on:
+      - db
     volumes:
       - ./backend:/app
     command: uvicorn main:app --reload --host 0.0.0.0 --port 8000
+
+volumes:
+  pgdata:

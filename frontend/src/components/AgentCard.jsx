@@ -11,10 +11,8 @@ export default function AgentCard({ name, role, color, content, streaming, waiti
         </div>
       </div>
       <div className="agent-body">
-        {waiting && <span className="waiting-text">Waiting...</span>}
-        {content && (
-          <ReactMarkdown>{content}</ReactMarkdown>
-        )}
+        {waiting && !content && <span className="waiting-text">Waiting...</span>}
+        {content && <ReactMarkdown>{content}</ReactMarkdown>}
         {streaming && <span className="cursor" />}
       </div>
     </div>
